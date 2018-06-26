@@ -272,6 +272,37 @@ void OverviewWidget::generateThumbnail()
             }
         }
     }
+
+    {
+        QMutexLocker locker(&mutex);
+        if (m_canvas)
+        {
+            KisImageSP image = m_canvas->image();
+
+            OverviewThumbnailStrokeStrategy* stroke = new OverviewThumbnailStrokeStrategy(image);
+            connect(stroke, SIGNAL(thumbnailUpdated(QImage)), this, SLOT(updateSnapshot(QImage)));
+               
+            auto snapshotStrokeId = image->startStroke(stroke);
+            KisPaintDeviceSP dev = image->projection();
+            KisPaintDeviceSP thumbDev = new KisPaintDevice(dev->colorSpace());
+
+            //creating a special stroke that computes thumbnail image in small chunks that can be quickly interrupted
+            //if user starts painting
+            QList<KisStrokeJobData*> jobs = OverviewThumbnailStrokeStrategy::createJobsData(dev, image->bounds(), thumbDev, image->bounds().size());
+
+            Q_FOREACH (KisStrokeJobData *jd, jobs) {
+                image->addJob(snapshotStrokeId, jd);
+            }
+            image->endStroke(snapshotStrokeId);
+        }
+
+    }
+}
+
+void OverviewWidget::updateSnapshot(QImage pixmap)
+{
+    static int counter = 0;
+    pixmap.save(QString("/home/shiy/snapshot/test%1.png").arg(counter++));
 }
 
 void OverviewWidget::updateThumbnail(QImage pixmap)
