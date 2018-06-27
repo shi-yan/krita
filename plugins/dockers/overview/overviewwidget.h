@@ -41,7 +41,7 @@ public:
     ~OverviewThumbnailStrokeStrategy() override;
 
     static QList<KisStrokeJobData*> createJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev, const QSize &thumbnailSize);
-    static QList<KisStrokeJobData*> createSnapshotJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev);
+    static QList<KisStrokeJobData*> createSnapshotJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev, const QString &path, int counter);
 
 private:
     void initStrokeCallback() override;
