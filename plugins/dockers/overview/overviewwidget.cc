@@ -353,11 +353,11 @@ void OverviewWidget::generateThumbnail()
                
             auto snapshotStrokeId = image->startStroke(stroke);
             KisPaintDeviceSP dev = image->projection();
-            KisPaintDeviceSP thumbDev = new KisPaintDevice(dev->colorSpace());
+            //KisPaintDeviceSP thumbDev = new KisPaintDevice(dev->colorSpace());
 
             //creating a special stroke that computes thumbnail image in small chunks that can be quickly interrupted
             //if user starts painting
-            QList<KisStrokeJobData*> jobs = OverviewThumbnailStrokeStrategy::createSnapshotJobsData(dev, image->bounds(), thumbDev, m_recordPath, ++m_recordCounter);
+            QList<KisStrokeJobData*> jobs = OverviewThumbnailStrokeStrategy::createSnapshotJobsData(dev, image->bounds(), m_recordPath, ++m_recordCounter);
 
             Q_FOREACH (KisStrokeJobData *jd, jobs) {
                 image->addJob(snapshotStrokeId, jd);
@@ -444,17 +444,18 @@ QList<KisStrokeJobData *> OverviewThumbnailStrokeStrategy::createJobsData(KisPai
 }
 
 
-QList<KisStrokeJobData *> OverviewThumbnailStrokeStrategy::createSnapshotJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev, const QString &path, int counter)
+QList<KisStrokeJobData *> OverviewThumbnailStrokeStrategy::createSnapshotJobsData(KisPaintDeviceSP dev, const QRect& imageRect, const QString &path, int counter)
 {
-    QSize thumbnailOversampledSize = imageRect.size();
+    //QSize thumbnailOversampledSize = imageRect.size();
 
-    QVector<QRect> tileRects = KritaUtils::splitRectIntoPatches(QRect(QPoint(0, 0), thumbnailOversampledSize), QSize(thumbnailTileDim, thumbnailTileDim));
+    /*QVector<QRect> tileRects = KritaUtils::splitRectIntoPatches(QRect(QPoint(0, 0), thumbnailOversampledSize), QSize(thumbnailTileDim, thumbnailTileDim));
     QList<KisStrokeJobData*> jobsData;
 
     Q_FOREACH (const QRect &tileRectangle, tileRects) {
         jobsData << new OverviewThumbnailStrokeStrategy::Private::ProcessData(dev, thumbDev, thumbnailOversampledSize, tileRectangle);
-    }
-    jobsData << new OverviewThumbnailStrokeStrategy::Private::FinishProcessing(thumbDev, true, path, counter);
+    }*/
+    QList<KisStrokeJobData*> jobsData;
+    jobsData << new OverviewThumbnailStrokeStrategy::Private::FinishProcessing(dev, true, path, counter);
 
     return jobsData;
 }
@@ -488,22 +489,19 @@ void OverviewThumbnailStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
     if (d_fp) {
         QImage overviewImage;
 
-        //if (!d_fp->m_isSnapshot)
+        if (!d_fp->m_isSnapshot)
         {
             KoDummyUpdater updater;
             KisTransformWorker worker(d_fp->thumbDev, 1 / oversample, 1 / oversample, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                   &updater, KisFilterStrategyRegistry::instance()->value("Bilinear"));
             worker.run();
-        }
-
-        overviewImage = d_fp->thumbDev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
-
-        if (!d_fp->m_isSnapshot)
-        {
+            overviewImage = d_fp->thumbDev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
+        
             emit thumbnailUpdated(overviewImage);
         }
         else
         {
+            overviewImage = d_fp->thumbDev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
             QString filename = QString(d_fp->m_path % "_%1.png").arg(d_fp->m_counter, 7, 10, QChar('0'));
             qDebug() << "save image" << filename;
             overviewImage.save(filename);
