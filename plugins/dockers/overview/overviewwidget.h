@@ -103,6 +103,7 @@ private:
     QPixmap m_oldPixmap;
     QPixmap m_pixmap;
     QPointer<KisCanvas2> m_canvas;
+    QPointer<KisCanvas2> m_recordingCanvas;
 
     bool m_dragging;
     QPointF m_lastPos;

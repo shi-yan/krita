@@ -210,6 +210,16 @@ void OverviewWidget::enableRecord(bool &enabled, const QString &path)
                 //qDebug() << QString("%1").arg((qulonglong)numCount, 7, 10, QChar('0'));
             }
         }
+
+        if (m_canvas)
+        {
+            m_recordingCanvas = m_canvas;
+        }
+        else
+        {
+            enabled = m_recordEnabled = false;
+            return;
+        }
     }
 }
 
@@ -328,7 +338,7 @@ void OverviewWidget::generateThumbnail()
     else
     {
         QMutexLocker locker(&mutex);
-        if (m_canvas)
+        if (m_canvas && m_recordingCanvas == m_canvas)
         {
             KisImageSP image = m_canvas->image();
 
