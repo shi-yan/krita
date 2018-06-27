@@ -41,6 +41,7 @@ public:
     ~OverviewThumbnailStrokeStrategy() override;
 
     static QList<KisStrokeJobData*> createJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev, const QSize &thumbnailSize);
+    static QList<KisStrokeJobData*> createSnapshotJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev);
 
 private:
     void initStrokeCallback() override;
@@ -75,6 +76,8 @@ public:
         m_canvas = 0;
     }
 
+    void enableRecord(bool &enabled, const QString &path);
+
 public Q_SLOTS:
     void startUpdateCanvasProjection();
     void generateThumbnail();
@@ -103,6 +106,9 @@ private:
 
     bool m_dragging;
     QPointF m_lastPos;
+    QString m_recordPath;
+    bool m_recordEnabled;
+    int m_recordCounter;
 
     QColor m_outlineColor;
     KisIdleWatcher m_imageIdleWatcher;
