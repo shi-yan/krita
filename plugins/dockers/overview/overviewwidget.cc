@@ -44,6 +44,7 @@
 #include <QDir>
 #include <QRegularExpression>
 #include <QRegularExpressionMatch>
+#include <QtConcurrent>
 
 const qreal oversample = 2.;
 const int thumbnailTileDim = 128;
@@ -51,6 +52,49 @@ const int thumbnailTileDim = 128;
 struct OverviewThumbnailStrokeStrategy::Private {
 
     class InitData : public KisStrokeJobData
+    {
+    public:
+        InitData(KisPaintDeviceSP _device)
+            : KisStrokeJobData(SEQUENTIAL),
+              device(_device)
+        {}
+
+        KisPaintDeviceSP device;
+    };
+
+    class ProcessData : public KisStrokeJobData
+    {
+    public:
+        ProcessData(KisPaintDeviceSP _dev, KisPaintDeviceSP _thumbDev, const QSize& _thumbnailSize, const QRect &_rect)
+            : KisStrokeJobData(CONCURRENT),
+              dev(_dev), thumbDev(_thumbDev), thumbnailSize(_thumbnailSize), tileRect(_rect)
+        {}
+
+        KisPaintDeviceSP dev;
+        KisPaintDeviceSP thumbDev;
+        QSize thumbnailSize;
+        QRect tileRect;
+    };
+    class FinishProcessing : public KisStrokeJobData
+    {
+    public:
+        FinishProcessing(KisPaintDeviceSP _thumbDev, bool isSnapshot = false, const QString &path = QString(), int counter = 0)
+            : KisStrokeJobData(SEQUENTIAL),
+              thumbDev(_thumbDev),
+              m_isSnapshot(isSnapshot),
+              m_path(path),
+              m_counter(counter)
+        {}
+        KisPaintDeviceSP thumbDev;
+        bool m_isSnapshot;
+        QString m_path;
+        int m_counter;
+    };
+};
+
+struct SnapshotStrokeStrategy::Private
+{
+        class InitData : public KisStrokeJobData
     {
     public:
         InitData(KisPaintDeviceSP _device)
@@ -308,7 +352,7 @@ void OverviewWidget::wheelEvent(QWheelEvent* event)
 
 void OverviewWidget::generateThumbnail()
 {
-    if (!m_recordEnabled)
+    
     {
         if (isVisible()) {
             QMutexLocker locker(&mutex);
@@ -341,28 +385,39 @@ void OverviewWidget::generateThumbnail()
             }
         }
     }
-    else
+    
+    if (m_recordEnabled)
     {
         QMutexLocker locker(&mutex);
         if (m_canvas && m_recordingCanvas == m_canvas)
         {
             KisImageSP image = m_canvas->image();
 
-            OverviewThumbnailStrokeStrategy* stroke = new OverviewThumbnailStrokeStrategy(image);
-            connect(stroke, SIGNAL(thumbnailUpdated(QImage)), this, SLOT(updateSnapshot(QImage)));
-               
-            auto snapshotStrokeId = image->startStroke(stroke);
+            //SnapshotStrokeStrategy* stroke = new SnapshotStrokeStrategy(image);
+            
+            //auto snapshotStrokeId = image->startStroke(stroke);
             KisPaintDeviceSP dev = image->projection();
             //KisPaintDeviceSP thumbDev = new KisPaintDevice(dev->colorSpace());
 
             //creating a special stroke that computes thumbnail image in small chunks that can be quickly interrupted
             //if user starts painting
-            QList<KisStrokeJobData*> jobs = OverviewThumbnailStrokeStrategy::createSnapshotJobsData(dev, image->bounds(), m_recordPath, ++m_recordCounter);
+            //QList<KisStrokeJobData*> jobs = SnapshotStrokeStrategy::createSnapshotJobsData(dev, image->bounds(), m_recordPath, ++m_recordCounter);
 
-            Q_FOREACH (KisStrokeJobData *jd, jobs) {
-                image->addJob(snapshotStrokeId, jd);
-            }
-            image->endStroke(snapshotStrokeId);
+            //Q_FOREACH (KisStrokeJobData *jd, jobs) {
+            //    image->addJob(snapshotStrokeId, jd);
+            //}
+            //image->endStroke(snapshotStrokeId);
+            QtConcurrent::run([=]() 
+            {
+
+                QImage overviewImage = dev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
+                QString filename = QString(m_recordPath % "_%1.png").arg(++m_recordCounter, 7, 10, QChar('0'));
+                qDebug() << "save image" << filename;
+                overviewImage.save(filename);
+
+                // Code in this block will run in another thread
+            });
+
         }
 
     }
@@ -424,6 +479,19 @@ OverviewThumbnailStrokeStrategy::OverviewThumbnailStrokeStrategy(KisImageWSP ima
     setCanForgetAboutMe(true);
 }
 
+SnapshotStrokeStrategy::SnapshotStrokeStrategy(KisImageWSP image)
+    : KisSimpleStrokeStrategy("Snapshot"), m_image(image)
+{
+    enableJob(KisSimpleStrokeStrategy::JOB_INIT, true, KisStrokeJobData::BARRIER, KisStrokeJobData::EXCLUSIVE);
+    enableJob(KisSimpleStrokeStrategy::JOB_DOSTROKE);
+    //enableJob(KisSimpleStrokeStrategy::JOB_FINISH);
+    enableJob(KisSimpleStrokeStrategy::JOB_CANCEL, true, KisStrokeJobData::SEQUENTIAL, KisStrokeJobData::EXCLUSIVE);
+
+    setRequestsOtherStrokesToEnd(false);
+    setClearsRedoOnStart(false);
+    setCanForgetAboutMe(true);
+}
+
 QList<KisStrokeJobData *> OverviewThumbnailStrokeStrategy::createJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev, const QSize& thumbnailSize)
 {
     QSize thumbnailOversampledSize = oversample * thumbnailSize;
@@ -444,18 +512,10 @@ QList<KisStrokeJobData *> OverviewThumbnailStrokeStrategy::createJobsData(KisPai
 }
 
 
-QList<KisStrokeJobData *> OverviewThumbnailStrokeStrategy::createSnapshotJobsData(KisPaintDeviceSP dev, const QRect& imageRect, const QString &path, int counter)
+QList<KisStrokeJobData *> SnapshotStrokeStrategy::createSnapshotJobsData(KisPaintDeviceSP dev, const QRect& imageRect, const QString &path, int counter)
 {
-    //QSize thumbnailOversampledSize = imageRect.size();
-
-    /*QVector<QRect> tileRects = KritaUtils::splitRectIntoPatches(QRect(QPoint(0, 0), thumbnailOversampledSize), QSize(thumbnailTileDim, thumbnailTileDim));
     QList<KisStrokeJobData*> jobsData;
-
-    Q_FOREACH (const QRect &tileRectangle, tileRects) {
-        jobsData << new OverviewThumbnailStrokeStrategy::Private::ProcessData(dev, thumbDev, thumbnailOversampledSize, tileRectangle);
-    }*/
-    QList<KisStrokeJobData*> jobsData;
-    jobsData << new OverviewThumbnailStrokeStrategy::Private::FinishProcessing(dev, true, path, counter);
+    jobsData << new SnapshotStrokeStrategy::Private::FinishProcessing(dev, true, path, counter);
 
     return jobsData;
 }
@@ -464,10 +524,15 @@ OverviewThumbnailStrokeStrategy::~OverviewThumbnailStrokeStrategy()
 {
 }
 
+SnapshotStrokeStrategy::~SnapshotStrokeStrategy()
+{
+}
 
 void OverviewThumbnailStrokeStrategy::initStrokeCallback()
 {
 }
+
+void SnapshotStrokeStrategy::initStrokeCallback(){}
 
 void OverviewThumbnailStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
 {
@@ -489,8 +554,7 @@ void OverviewThumbnailStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
     if (d_fp) {
         QImage overviewImage;
 
-        if (!d_fp->m_isSnapshot)
-        {
+
             KoDummyUpdater updater;
             KisTransformWorker worker(d_fp->thumbDev, 1 / oversample, 1 / oversample, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                   &updater, KisFilterStrategyRegistry::instance()->value("Bilinear"));
@@ -498,14 +562,22 @@ void OverviewThumbnailStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
             overviewImage = d_fp->thumbDev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
         
             emit thumbnailUpdated(overviewImage);
-        }
-        else
-        {
+
+        return;
+    }
+}
+
+void SnapshotStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
+{
+    Private::FinishProcessing *d_fp = dynamic_cast<Private::FinishProcessing*>(data);
+    if (d_fp) {
+        QImage overviewImage;
+
             overviewImage = d_fp->thumbDev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
             QString filename = QString(d_fp->m_path % "_%1.png").arg(d_fp->m_counter, 7, 10, QChar('0'));
             qDebug() << "save image" << filename;
             overviewImage.save(filename);
-        }
+    
         return;
     }
 }
@@ -514,6 +586,10 @@ void OverviewThumbnailStrokeStrategy::finishStrokeCallback()
 {
 }
 
+void SnapshotStrokeStrategy::finishStrokeCallback(){}
+
 void OverviewThumbnailStrokeStrategy::cancelStrokeCallback()
 {
 }
+
+void SnapshotStrokeStrategy::cancelStrokeCallback(){}
