@@ -15,7 +15,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#include "overviewdocker.h"
+#include "recorderdocker.h"
 
 #include <stdlib.h>
 
@@ -34,20 +34,20 @@
 #include "kis_types.h"
 #include "KisViewManager.h"
 
-#include "overviewdocker_dock.h"
+#include "recorderdocker_dock.h"
 #include <KoDockRegistry.h>
 
-K_PLUGIN_FACTORY_WITH_JSON(OverviewDockerPluginFactory, "krita_overviewdocker.json", registerPlugin<OverviewDockerPlugin>();)
+K_PLUGIN_FACTORY_WITH_JSON(RecorderDockerPluginFactory, "krita_recorderdocker.json", registerPlugin<RecorderDockerPlugin>();)
 
-class OverviewDockerDockFactory : public KoDockFactoryBase {
+class RecorderDockerDockFactory : public KoDockFactoryBase {
 public:
-    OverviewDockerDockFactory()
+    RecorderDockerDockFactory()
     {
     }
 
     QString id() const override
     {
-        return QString( "OverviewDocker" );
+        return QString( "RecorderDocker" );
     }
 
     virtual Qt::DockWidgetArea defaultDockWidgetArea() const
@@ -57,7 +57,7 @@ public:
 
     QDockWidget* createDockWidget() override
     {
-        OverviewDockerDock * dockWidget = new OverviewDockerDock();
+        RecorderDockerDock * dockWidget = new RecorderDockerDock();
         dockWidget->setObjectName(id());
 
         return dockWidget;
@@ -73,15 +73,15 @@ private:
 };
 
 
-OverviewDockerPlugin::OverviewDockerPlugin(QObject *parent, const QVariantList &)
+RecorderDockerPlugin::RecorderDockerPlugin(QObject *parent, const QVariantList &)
     : QObject(parent)
 {
-    KoDockRegistry::instance()->add(new OverviewDockerDockFactory());
+    KoDockRegistry::instance()->add(new RecorderDockerDockFactory());
 }
 
-OverviewDockerPlugin::~OverviewDockerPlugin()
+RecorderDockerPlugin::~RecorderDockerPlugin()
 {
     m_view = 0;
 }
 
-#include "overviewdocker.moc"
+#include "recorderdocker.moc"

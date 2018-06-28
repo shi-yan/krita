@@ -1,7 +1,7 @@
 {
-    "Id": "Overview Docker",
+    "Id": "Recorder Docker",
     "Type": "Service",
-    "X-KDE-Library": "kritaoverviewdocker",
+    "X-KDE-Library": "kritarecorderdocker",
     "X-KDE-ServiceTypes": [
         "Krita/Dock"
     ],

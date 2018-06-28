@@ -387,6 +387,15 @@ width=100
 xPosition=0
 yPosition=0
 
+[krita][DockWidget RecorderDocker]
+Collapsed=false
+DockArea=2
+Locked=false
+height=30
+width=100
+xPosition=0
+yPosition=0
+
 [krita][DockWidget Shape Properties]
 DockArea=2
 Locked=false

@@ -17,7 +17,7 @@
  */
 
 
-#include "overviewwidget.h"
+#include "recorderwidget.h"
 
 #include <QMouseEvent>
 #include <QPainter>
@@ -49,7 +49,7 @@
 const qreal oversample = 2.;
 const int thumbnailTileDim = 128;
 
-struct OverviewThumbnailStrokeStrategy::Private {
+struct RecorderThumbnailStrokeStrategy::Private {
 
     class InitData : public KisStrokeJobData
     {
@@ -86,7 +86,7 @@ struct OverviewThumbnailStrokeStrategy::Private {
     };
 };
 
-OverviewWidget::OverviewWidget(QWidget * parent)
+RecorderWidget::RecorderWidget(QWidget * parent)
     : QWidget(parent)
     , m_canvas(0)
     , m_dragging(false)
@@ -98,11 +98,11 @@ OverviewWidget::OverviewWidget(QWidget * parent)
     m_recordCounter = 0;
 }
 
-OverviewWidget::~OverviewWidget()
+RecorderWidget::~RecorderWidget()
 {
 }
 
-void OverviewWidget::setCanvas(KoCanvasBase * canvas)
+void RecorderWidget::setCanvas(KoCanvasBase * canvas)
 {
     if (m_canvas) {
         m_canvas->image()->disconnect(this);
@@ -113,7 +113,7 @@ void OverviewWidget::setCanvas(KoCanvasBase * canvas)
     if (m_canvas) {
         m_imageIdleWatcher.setTrackedImage(m_canvas->image());
 
-        connect(&m_imageIdleWatcher, &KisIdleWatcher::startedIdleMode, this, &OverviewWidget::generateThumbnail);
+        connect(&m_imageIdleWatcher, &KisIdleWatcher::startedIdleMode, this, &RecorderWidget::generateThumbnail);
 
         connect(m_canvas->image(), SIGNAL(sigImageUpdated(QRect)),SLOT(startUpdateCanvasProjection()));
         connect(m_canvas->image(), SIGNAL(sigSizeChanged(QPointF, QPointF)),SLOT(startUpdateCanvasProjection()));
@@ -123,19 +123,19 @@ void OverviewWidget::setCanvas(KoCanvasBase * canvas)
     }
 }
 
-QSize OverviewWidget::calculatePreviewSize()
+QSize RecorderWidget::calculatePreviewSize()
 {
     QSize imageSize(m_canvas->image()->bounds().size());
     imageSize.scale(size(), Qt::KeepAspectRatio);
     return imageSize;
 }
 
-QPointF OverviewWidget::previewOrigin()
+QPointF RecorderWidget::previewOrigin()
 {
     return QPointF((width() - m_pixmap.width()) / 2.0f, (height() - m_pixmap.height()) / 2.0f);
 }
 
-QPolygonF OverviewWidget::previewPolygon()
+QPolygonF RecorderWidget::previewPolygon()
 {
     if (m_canvas) {
         const KisCoordinatesConverter* converter = m_canvas->coordinatesConverter();
@@ -149,7 +149,7 @@ QPolygonF OverviewWidget::previewPolygon()
     return QPolygonF();
 }
 
-QTransform OverviewWidget::imageToPreviewTransform()
+QTransform RecorderWidget::imageToPreviewTransform()
 {
     QTransform imageToPreview;
     imageToPreview.scale(calculatePreviewSize().width() / (float)m_canvas->image()->width(),
@@ -157,18 +157,18 @@ QTransform OverviewWidget::imageToPreviewTransform()
     return imageToPreview;
 }
 
-void OverviewWidget::startUpdateCanvasProjection()
+void RecorderWidget::startUpdateCanvasProjection()
 {
     m_imageIdleWatcher.startCountdown();
 }
 
-void OverviewWidget::showEvent(QShowEvent *event)
+void RecorderWidget::showEvent(QShowEvent *event)
 {
     Q_UNUSED(event);
     m_imageIdleWatcher.startCountdown();
 }
 
-void OverviewWidget::enableRecord(bool &enabled, const QString &path)
+void RecorderWidget::enableRecord(bool &enabled, const QString &path)
 {
     m_recordEnabled = enabled;
     if (m_recordEnabled)
@@ -224,7 +224,7 @@ void OverviewWidget::enableRecord(bool &enabled, const QString &path)
     }
 }
 
-void OverviewWidget::resizeEvent(QResizeEvent *event)
+void RecorderWidget::resizeEvent(QResizeEvent *event)
 {
     Q_UNUSED(event);
     if (m_canvas) {
@@ -236,7 +236,7 @@ void OverviewWidget::resizeEvent(QResizeEvent *event)
     }
 }
 
-void OverviewWidget::mousePressEvent(QMouseEvent* event)
+void RecorderWidget::mousePressEvent(QMouseEvent* event)
 {
     if (m_canvas) {
         QPointF previewPos = event->pos() - previewOrigin();
@@ -261,7 +261,7 @@ void OverviewWidget::mousePressEvent(QMouseEvent* event)
     update();
 }
 
-void OverviewWidget::mouseMoveEvent(QMouseEvent* event)
+void RecorderWidget::mouseMoveEvent(QMouseEvent* event)
 {
     if (m_dragging) {
         QPointF previewPos = event->pos() - previewOrigin();
@@ -283,14 +283,14 @@ void OverviewWidget::mouseMoveEvent(QMouseEvent* event)
     event->accept();
 }
 
-void OverviewWidget::mouseReleaseEvent(QMouseEvent* event)
+void RecorderWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     m_dragging = false;
     event->accept();
     update();
 }
 
-void OverviewWidget::wheelEvent(QWheelEvent* event)
+void RecorderWidget::wheelEvent(QWheelEvent* event)
 {
     float delta = event->delta();
 
@@ -301,7 +301,7 @@ void OverviewWidget::wheelEvent(QWheelEvent* event)
     }
 }
 
-void OverviewWidget::generateThumbnail()
+void RecorderWidget::generateThumbnail()
 {
     if (isVisible()) {
         QMutexLocker locker(&mutex);
@@ -315,7 +315,7 @@ void OverviewWidget::generateThumbnail()
                     strokeId.clear();
                 }
 
-                OverviewThumbnailStrokeStrategy* stroke = new OverviewThumbnailStrokeStrategy(image);
+                RecorderThumbnailStrokeStrategy* stroke = new RecorderThumbnailStrokeStrategy(image);
                 connect(stroke, SIGNAL(thumbnailUpdated(QImage)), this, SLOT(updateThumbnail(QImage)));
 
                 strokeId = image->startStroke(stroke);
@@ -324,7 +324,7 @@ void OverviewWidget::generateThumbnail()
 
                 //creating a special stroke that computes thumbnail image in small chunks that can be quickly interrupted
                 //if user starts painting
-                QList<KisStrokeJobData*> jobs = OverviewThumbnailStrokeStrategy::createJobsData(dev, image->bounds(), thumbDev, previewSize);
+                QList<KisStrokeJobData*> jobs = RecorderThumbnailStrokeStrategy::createJobsData(dev, image->bounds(), thumbDev, previewSize);
 
                 Q_FOREACH (KisStrokeJobData *jd, jobs) {
                     image->addJob(strokeId, jd);
@@ -345,24 +345,24 @@ void OverviewWidget::generateThumbnail()
 
             QtConcurrent::run([=]() 
             {
-                QImage overviewImage = dev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
+                QImage recorderImage = dev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
                 QString filename = QString(m_recordPath % "_%1.png").arg(++m_recordCounter, 7, 10, QChar('0'));
                 qDebug() << "save image" << filename;
-                overviewImage.save(filename);
+                recorderImage.save(filename);
                 // Code in this block will run in another thread
             });
         }
     }
 }
 
-void OverviewWidget::updateThumbnail(QImage pixmap)
+void RecorderWidget::updateThumbnail(QImage pixmap)
 {
     m_pixmap = QPixmap::fromImage(pixmap);
     m_oldPixmap = m_pixmap.copy();
     update();
 }
 
-void OverviewWidget::paintEvent(QPaintEvent* event)
+void RecorderWidget::paintEvent(QPaintEvent* event)
 {
     QWidget::paintEvent(event);
 
@@ -389,8 +389,8 @@ void OverviewWidget::paintEvent(QPaintEvent* event)
     }
 }
 
-OverviewThumbnailStrokeStrategy::OverviewThumbnailStrokeStrategy(KisImageWSP image)
-    : KisSimpleStrokeStrategy("OverviewThumbnail"), m_image(image)
+RecorderThumbnailStrokeStrategy::RecorderThumbnailStrokeStrategy(KisImageWSP image)
+    : KisSimpleStrokeStrategy("RecorderThumbnail"), m_image(image)
 {
     enableJob(KisSimpleStrokeStrategy::JOB_INIT, true, KisStrokeJobData::BARRIER, KisStrokeJobData::EXCLUSIVE);
     enableJob(KisSimpleStrokeStrategy::JOB_DOSTROKE);
@@ -402,7 +402,7 @@ OverviewThumbnailStrokeStrategy::OverviewThumbnailStrokeStrategy(KisImageWSP ima
     setCanForgetAboutMe(true);
 }
 
-QList<KisStrokeJobData *> OverviewThumbnailStrokeStrategy::createJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev, const QSize& thumbnailSize)
+QList<KisStrokeJobData *> RecorderThumbnailStrokeStrategy::createJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev, const QSize& thumbnailSize)
 {
     QSize thumbnailOversampledSize = oversample * thumbnailSize;
 
@@ -414,22 +414,22 @@ QList<KisStrokeJobData *> OverviewThumbnailStrokeStrategy::createJobsData(KisPai
     QList<KisStrokeJobData*> jobsData;
 
     Q_FOREACH (const QRect &tileRectangle, tileRects) {
-        jobsData << new OverviewThumbnailStrokeStrategy::Private::ProcessData(dev, thumbDev, thumbnailOversampledSize, tileRectangle);
+        jobsData << new RecorderThumbnailStrokeStrategy::Private::ProcessData(dev, thumbDev, thumbnailOversampledSize, tileRectangle);
     }
-    jobsData << new OverviewThumbnailStrokeStrategy::Private::FinishProcessing(thumbDev);
+    jobsData << new RecorderThumbnailStrokeStrategy::Private::FinishProcessing(thumbDev);
 
     return jobsData;
 }
 
-OverviewThumbnailStrokeStrategy::~OverviewThumbnailStrokeStrategy()
+RecorderThumbnailStrokeStrategy::~RecorderThumbnailStrokeStrategy()
 {
 }
 
-void OverviewThumbnailStrokeStrategy::initStrokeCallback()
+void RecorderThumbnailStrokeStrategy::initStrokeCallback()
 {
 }
 
-void OverviewThumbnailStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
+void RecorderThumbnailStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
 {
     Private::ProcessData *d_pd = dynamic_cast<Private::ProcessData*>(data);
     if (d_pd) {
@@ -447,25 +447,25 @@ void OverviewThumbnailStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
 
     Private::FinishProcessing *d_fp = dynamic_cast<Private::FinishProcessing*>(data);
     if (d_fp) {
-        QImage overviewImage;
+        QImage recorderImage;
 
 
             KoDummyUpdater updater;
             KisTransformWorker worker(d_fp->thumbDev, 1 / oversample, 1 / oversample, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                   &updater, KisFilterStrategyRegistry::instance()->value("Bilinear"));
             worker.run();
-            overviewImage = d_fp->thumbDev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
+            recorderImage = d_fp->thumbDev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
         
-            emit thumbnailUpdated(overviewImage);
+            emit thumbnailUpdated(recorderImage);
 
         return;
     }
 }
 
-void OverviewThumbnailStrokeStrategy::finishStrokeCallback()
+void RecorderThumbnailStrokeStrategy::finishStrokeCallback()
 {
 }
 
-void OverviewThumbnailStrokeStrategy::cancelStrokeCallback()
+void RecorderThumbnailStrokeStrategy::cancelStrokeCallback()
 {
 }

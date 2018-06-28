@@ -17,8 +17,8 @@
  */
 
 
-#ifndef OVERVIEWWIDGET_H
-#define OVERVIEWWIDGET_H
+#ifndef RECORDERWIDGET_H
+#define RECORDERWIDGET_H
 #include <QObject>
 #include <QWidget>
 #include <QPixmap>
@@ -33,12 +33,12 @@
 class KisSignalCompressor;
 class KoCanvasBase;
 
-class OverviewThumbnailStrokeStrategy : public QObject, public KisSimpleStrokeStrategy
+class RecorderThumbnailStrokeStrategy : public QObject, public KisSimpleStrokeStrategy
 {
     Q_OBJECT
 public:
-    OverviewThumbnailStrokeStrategy(KisImageWSP image);
-    ~OverviewThumbnailStrokeStrategy() override;
+    RecorderThumbnailStrokeStrategy(KisImageWSP image);
+    ~RecorderThumbnailStrokeStrategy() override;
 
     static QList<KisStrokeJobData*> createJobsData(KisPaintDeviceSP dev, const QRect& imageRect, KisPaintDeviceSP thumbDev, const QSize &thumbnailSize);
 
@@ -49,7 +49,7 @@ private:
     void cancelStrokeCallback() override;
 
 Q_SIGNALS:
-    //Emitted when thumbnail is updated and overviewImage is fully generated.
+    //Emitted when thumbnail is updated and recorderImage is fully generated.
     void thumbnailUpdated(QImage pixmap);
 
 private:
@@ -59,14 +59,14 @@ private:
     KisImageSP m_image;
 };
 
-class OverviewWidget : public QWidget
+class RecorderWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    OverviewWidget(QWidget * parent = 0);
+    RecorderWidget(QWidget * parent = 0);
 
-    ~OverviewWidget() override;
+    ~RecorderWidget() override;
 
     virtual void setCanvas(KoCanvasBase *canvas);
     virtual void unsetCanvas()
@@ -116,4 +116,4 @@ private:
 
 
 
-#endif /* OVERVIEWWIDGET_H */
+#endif /* RECORDERWIDGET_H */

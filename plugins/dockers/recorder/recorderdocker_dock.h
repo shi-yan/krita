@@ -15,8 +15,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef _OVERVIEW_DOCK_H_
-#define _OVERVIEW_DOCK_H_
+#ifndef _RECORDER_DOCK_H_
+#define _RECORDER_DOCK_H_
 
 #include <QPointer>
 #include <QDockWidget>
@@ -28,20 +28,20 @@
 #include <kis_canvas2.h>
 
 class QVBoxLayout;
-class OverviewWidget;
+class RecorderWidget;
 
-class OverviewDockerDock : public QDockWidget, public KoCanvasObserverBase {
+class RecorderDockerDock : public QDockWidget, public KoCanvasObserverBase {
     Q_OBJECT
 public:
-    OverviewDockerDock();
-    QString observerName() override { return "OverviewDockerDock"; }
+    RecorderDockerDock();
+    QString observerName() override { return "RecorderDockerDock"; }
     void setCanvas(KoCanvasBase *canvas) override;
     void unsetCanvas() override;
 
 private:
     QVBoxLayout *m_layout;
     QHBoxLayout *m_recordLayout;
-    OverviewWidget *m_overviewWidget;
+    RecorderWidget *m_recorderWidget;
     QWidget *m_zoomSlider;
     QPointer<KisCanvas2> m_canvas;
     QLineEdit *m_recordFileLocationLineEdit;

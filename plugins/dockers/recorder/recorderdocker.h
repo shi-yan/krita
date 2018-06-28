@@ -15,8 +15,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#ifndef _OVERVIEW_DOCKER_H_
-#define _OVERVIEW_DOCKER_H_
+#ifndef _RECORDER_DOCKER_H_
+#define _RECORDER_DOCKER_H_
 
 #include <QObject>
 #include <QVariant>
@@ -26,12 +26,12 @@ class KisViewManager;
 /**
  * Template of view plugin
  */
-class OverviewDockerPlugin : public QObject
+class RecorderDockerPlugin : public QObject
 {
     Q_OBJECT
     public:
-        OverviewDockerPlugin(QObject *parent, const QVariantList &);
-        ~OverviewDockerPlugin() override;
+        RecorderDockerPlugin(QObject *parent, const QVariantList &);
+        ~RecorderDockerPlugin() override;
     private:
         KisViewManager* m_view;
 };

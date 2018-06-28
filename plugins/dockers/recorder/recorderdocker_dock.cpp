@@ -15,8 +15,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
  */
 
-#include "overviewdocker_dock.h"
-#include "overviewwidget.h"
+#include "recorderdocker_dock.h"
+#include "recorderwidget.h"
 
 #include <QLabel>
 #include <QVBoxLayout>
@@ -32,20 +32,20 @@
 #include <QDir>
 #include <QStringBuilder>
 
-OverviewDockerDock::OverviewDockerDock( )
-    : QDockWidget(i18n("Overview"))
+RecorderDockerDock::RecorderDockerDock( )
+    : QDockWidget(i18n("Recorder"))
     , m_zoomSlider(0)
     , m_canvas(0)
 {
     QWidget *page = new QWidget(this);
     m_layout = new QVBoxLayout(page);
 
-    m_overviewWidget = new OverviewWidget(this);
-    m_overviewWidget->setMinimumHeight(50);
-    m_overviewWidget->setBackgroundRole(QPalette::AlternateBase);
-    m_overviewWidget->setAutoFillBackground(true); // paints background role before paint()
+    m_recorderWidget = new RecorderWidget(this);
+    m_recorderWidget->setMinimumHeight(50);
+    m_recorderWidget->setBackgroundRole(QPalette::AlternateBase);
+    m_recorderWidget->setAutoFillBackground(true); // paints background role before paint()
 
-    m_layout->addWidget(m_overviewWidget, 1);
+    m_layout->addWidget(m_recorderWidget, 1);
     m_recordFileLocationLineEdit = new QLineEdit(this);
     m_recordFileLocationLineEdit->setText(QDir::homePath() % "/snapshot/image");
     m_recordLayout = new QHBoxLayout(this);
@@ -60,7 +60,7 @@ OverviewDockerDock::OverviewDockerDock( )
     setWidget(page);
 }
 
-void OverviewDockerDock::setCanvas(KoCanvasBase * canvas)
+void RecorderDockerDock::setCanvas(KoCanvasBase * canvas)
 {
     if(m_canvas == canvas)
         return;
@@ -80,24 +80,24 @@ void OverviewDockerDock::setCanvas(KoCanvasBase * canvas)
 
     m_canvas = dynamic_cast<KisCanvas2*>(canvas);
 
-    m_overviewWidget->setCanvas(canvas);
+    m_recorderWidget->setCanvas(canvas);
     if (m_canvas && m_canvas->viewManager() && m_canvas->viewManager()->zoomController() && m_canvas->viewManager()->zoomController()->zoomAction()) {
         m_zoomSlider = m_canvas->viewManager()->zoomController()->zoomAction()->createWidget(m_canvas->imageView()->KisView::statusBar());
         m_layout->addWidget(m_zoomSlider);
     }
 }
 
-void OverviewDockerDock::unsetCanvas()
+void RecorderDockerDock::unsetCanvas()
 {
     setEnabled(false);
     m_canvas = 0;
-    m_overviewWidget->unsetCanvas();
+    m_recorderWidget->unsetCanvas();
 }
 
-void OverviewDockerDock::onRecordButtonToggled(bool enabled)
+void RecorderDockerDock::onRecordButtonToggled(bool enabled)
 {
     bool enabled2 = enabled;
-    m_overviewWidget->enableRecord(enabled2, m_recordFileLocationLineEdit->text());
+    m_recorderWidget->enableRecord(enabled2, m_recordFileLocationLineEdit->text());
 
     if (enabled && !enabled2)
     {
