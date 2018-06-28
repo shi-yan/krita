@@ -21,9 +21,6 @@
 #include <QPointer>
 #include <QDockWidget>
 #include <KoCanvasObserverBase.h>
-#include <QPushButton>
-#include <QLineEdit>
-#include <QHBoxLayout>
 
 #include <kis_canvas2.h>
 
@@ -40,15 +37,9 @@ public:
 
 private:
     QVBoxLayout *m_layout;
-    QHBoxLayout *m_recordLayout;
     OverviewWidget *m_overviewWidget;
     QWidget *m_zoomSlider;
     QPointer<KisCanvas2> m_canvas;
-    QLineEdit *m_recordFileLocationLineEdit;
-    QPushButton *m_recordToggleButton;
-
-private Q_SLOTS:
-	void onRecordButtonToggled(bool enabled);
 };
 
 

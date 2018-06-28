@@ -41,10 +41,6 @@
 #include "kis_filter_strategy.h"
 #include <KoColorSpaceRegistry.h>
 #include <QApplication>
-#include <QDir>
-#include <QRegularExpression>
-#include <QRegularExpressionMatch>
-#include <QtConcurrent>
 
 const qreal oversample = 2.;
 const int thumbnailTileDim = 128;
@@ -95,7 +91,6 @@ OverviewWidget::OverviewWidget(QWidget * parent)
     setMouseTracking(true);
     KisConfig cfg;
     m_outlineColor = qApp->palette().color(QPalette::Highlight);
-    m_recordCounter = 0;
 }
 
 OverviewWidget::~OverviewWidget()
@@ -166,62 +161,6 @@ void OverviewWidget::showEvent(QShowEvent *event)
 {
     Q_UNUSED(event);
     m_imageIdleWatcher.startCountdown();
-}
-
-void OverviewWidget::enableRecord(bool &enabled, const QString &path)
-{
-    m_recordEnabled = enabled;
-    if (m_recordEnabled)
-    {
-        m_recordPath = path;
-
-        QUrl fileUrl(m_recordPath);
-
-        QString filename = fileUrl.fileName();
-        QString dirPath = fileUrl.adjusted(QUrl::RemoveFilename).path();
-
-        QDir dir(dirPath);
-
-        if (!dir.exists())
-        {
-            if (!dir.mkpath(dirPath))
-            {
-                enabled = m_recordEnabled = false;
-                return;
-            }
-        }
-
-        QFileInfoList images = dir.entryInfoList({filename % "_*.png"});
-
-        QRegularExpression namePattern("^"%filename%"_([0-9]{7}).png$");
-
-        foreach(auto info, images)
-        {
-            QRegularExpressionMatch match = namePattern.match(info.fileName());
-            if (match.hasMatch())
-            {
-                //qDebug() << "match" << info.fileName() << match.captured(1);
-                QString count = match.captured(1);
-                int numCount = count.toInt();
-
-                if (m_recordCounter < numCount)
-                {
-                    m_recordCounter = numCount;
-                }
-                //qDebug() << QString("%1").arg((qulonglong)numCount, 7, 10, QChar('0'));
-            }
-        }
-
-        if (m_canvas)
-        {
-            m_recordingCanvas = m_canvas;
-        }
-        else
-        {
-            enabled = m_recordEnabled = false;
-            return;
-        }
-    }
 }
 
 void OverviewWidget::resizeEvent(QResizeEvent *event)
@@ -332,26 +271,6 @@ void OverviewWidget::generateThumbnail()
                 image->endStroke(strokeId);
             }
         }
-    }    
-    
-    if (m_recordEnabled)
-    {
-        QMutexLocker locker(&mutex);
-        if (m_canvas && m_recordingCanvas == m_canvas)
-        {
-            KisImageSP image = m_canvas->image();
-
-            KisPaintDeviceSP dev = image->projection();
-
-            QtConcurrent::run([=]() 
-            {
-                QImage overviewImage = dev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
-                QString filename = QString(m_recordPath % "_%1.png").arg(++m_recordCounter, 7, 10, QChar('0'));
-                qDebug() << "save image" << filename;
-                overviewImage.save(filename);
-                // Code in this block will run in another thread
-            });
-        }
     }
 }
 
@@ -361,6 +280,7 @@ void OverviewWidget::updateThumbnail(QImage pixmap)
     m_oldPixmap = m_pixmap.copy();
     update();
 }
+
 
 void OverviewWidget::paintEvent(QPaintEvent* event)
 {
@@ -425,6 +345,7 @@ OverviewThumbnailStrokeStrategy::~OverviewThumbnailStrokeStrategy()
 {
 }
 
+
 void OverviewThumbnailStrokeStrategy::initStrokeCallback()
 {
 }
@@ -449,15 +370,13 @@ void OverviewThumbnailStrokeStrategy::doStrokeCallback(KisStrokeJobData *data)
     if (d_fp) {
         QImage overviewImage;
 
-
-            KoDummyUpdater updater;
-            KisTransformWorker worker(d_fp->thumbDev, 1 / oversample, 1 / oversample, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        KoDummyUpdater updater;
+        KisTransformWorker worker(d_fp->thumbDev, 1 / oversample, 1 / oversample, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                   &updater, KisFilterStrategyRegistry::instance()->value("Bilinear"));
-            worker.run();
-            overviewImage = d_fp->thumbDev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
-        
-            emit thumbnailUpdated(overviewImage);
+        worker.run();
 
+        overviewImage = d_fp->thumbDev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
+        emit thumbnailUpdated(overviewImage);
         return;
     }
 }

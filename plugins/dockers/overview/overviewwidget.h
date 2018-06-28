@@ -52,6 +52,7 @@ Q_SIGNALS:
     //Emitted when thumbnail is updated and overviewImage is fully generated.
     void thumbnailUpdated(QImage pixmap);
 
+
 private:
     struct Private;
     const QScopedPointer<Private> m_d;
@@ -73,8 +74,6 @@ public:
     {
         m_canvas = 0;
     }
-
-    void enableRecord(bool &enabled, const QString &path);
 
 public Q_SLOTS:
     void startUpdateCanvasProjection();
@@ -100,13 +99,9 @@ private:
     QPixmap m_oldPixmap;
     QPixmap m_pixmap;
     QPointer<KisCanvas2> m_canvas;
-    QPointer<KisCanvas2> m_recordingCanvas;
 
     bool m_dragging;
     QPointF m_lastPos;
-    QString m_recordPath;
-    bool m_recordEnabled;
-    int m_recordCounter;
 
     QColor m_outlineColor;
     KisIdleWatcher m_imageIdleWatcher;

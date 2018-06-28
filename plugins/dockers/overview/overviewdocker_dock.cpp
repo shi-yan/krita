@@ -29,8 +29,7 @@
 #include "kis_image.h"
 #include "kis_paint_device.h"
 #include "kis_signal_compressor.h"
-#include <QDir>
-#include <QStringBuilder>
+
 
 OverviewDockerDock::OverviewDockerDock( )
     : QDockWidget(i18n("Overview"))
@@ -46,17 +45,7 @@ OverviewDockerDock::OverviewDockerDock( )
     m_overviewWidget->setAutoFillBackground(true); // paints background role before paint()
 
     m_layout->addWidget(m_overviewWidget, 1);
-    m_recordFileLocationLineEdit = new QLineEdit(this);
-    m_recordFileLocationLineEdit->setText(QDir::homePath() % "/snapshot/image");
-    m_recordLayout = new QHBoxLayout(this);
-    m_recordLayout->addWidget(m_recordFileLocationLineEdit);
-    m_recordToggleButton = new QPushButton(this);
-    m_recordToggleButton->setCheckable(true);
-    m_recordToggleButton->setText("O");
-    m_recordLayout->addWidget(m_recordToggleButton);
-    m_layout->addLayout(m_recordLayout);
 
-    connect(m_recordToggleButton, SIGNAL(toggled(bool)), this, SLOT(onRecordButtonToggled(bool)));
     setWidget(page);
 }
 
@@ -92,19 +81,6 @@ void OverviewDockerDock::unsetCanvas()
     setEnabled(false);
     m_canvas = 0;
     m_overviewWidget->unsetCanvas();
-}
-
-void OverviewDockerDock::onRecordButtonToggled(bool enabled)
-{
-    bool enabled2 = enabled;
-    m_overviewWidget->enableRecord(enabled2, m_recordFileLocationLineEdit->text());
-
-    if (enabled && !enabled2)
-    {
-        disconnect(m_recordToggleButton, SIGNAL(toggle(bool)), this, SLOT(onRecordButtonToggled(bool)));
-        m_recordToggleButton->setChecked(false);
-        connect(m_recordToggleButton, SIGNAL(toggle(bool)), this, SLOT(onRecordButtonToggled(bool)));
-    }
 }
 
 
