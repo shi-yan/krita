@@ -52,29 +52,6 @@ Q_SIGNALS:
     //Emitted when thumbnail is updated and overviewImage is fully generated.
     void thumbnailUpdated(QImage pixmap);
 
-
-private:
-    struct Private;
-    const QScopedPointer<Private> m_d;
-    QMutex m_thumbnailMergeMutex;
-    KisImageSP m_image;
-};
-
-class SnapshotStrokeStrategy : public QObject, public KisSimpleStrokeStrategy
-{
-    Q_OBJECT
-public:
-    SnapshotStrokeStrategy(KisImageWSP image);
-    ~SnapshotStrokeStrategy() override;
-
-    static QList<KisStrokeJobData*> createSnapshotJobsData(KisPaintDeviceSP dev, const QRect& imageRect, const QString &path, int counter);
-
-private:
-    void initStrokeCallback() override;
-    void doStrokeCallback(KisStrokeJobData *data) override;
-    void finishStrokeCallback() override;
-    void cancelStrokeCallback() override;
-
 private:
     struct Private;
     const QScopedPointer<Private> m_d;
@@ -103,7 +80,6 @@ public Q_SLOTS:
     void startUpdateCanvasProjection();
     void generateThumbnail();
     void updateThumbnail(QImage pixmap);
-    void updateSnapshot(QImage pixmap);
 
 protected:
     void resizeEvent(QResizeEvent *event) override;
