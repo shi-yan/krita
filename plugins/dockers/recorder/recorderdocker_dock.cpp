@@ -34,25 +34,68 @@
 #include <QRegularExpressionMatch>
 #include <QtConcurrent>
 #include <KoColorSpaceRegistry.h>
+#include <QFileDialog>
+#include <kis_icon_utils.h>
+#include <klocalizedstring.h>
+#include <kactioncollection.h>
+#include <QRegExp>
+#include <QRegExpValidator>
 
 RecorderDockerDock::RecorderDockerDock( )
     : QDockWidget(i18n("Recorder"))
     , m_canvas(0)
     , m_imageIdleWatcher(250)
+    , m_recordEnabled(false)
+    , m_recordCounter(0)
 {
     QWidget *page = new QWidget(this);
-    m_layout = new QVBoxLayout(page);
+    m_layout = new QGridLayout(page);
+    m_recordDirectoryLabel = new QLabel(this);
+    m_recordDirectoryLabel->setText("Directory:");
 
-    m_recordFileLocationLineEdit = new QLineEdit(this);
-    m_recordFileLocationLineEdit->setText(QDir::homePath() % "/snapshot/image");
-    m_recordLayout = new QHBoxLayout(this);
-    m_recordLayout->addWidget(m_recordFileLocationLineEdit);
+    m_layout->addWidget(m_recordDirectoryLabel, 0, 0,1,2);
+
+    m_recordDirectoryLineEdit = new QLineEdit(this);
+    m_recordDirectoryLineEdit->setText(QDir::homePath());
+    m_recordDirectoryLineEdit->setReadOnly(true);
+    m_layout->addWidget(m_recordDirectoryLineEdit, 1, 0);
+
+    m_recordDirectoryPushButton = new QPushButton(this);
+    m_recordDirectoryPushButton->setIcon(KisIconUtils::loadIcon("folder"));
+    m_recordDirectoryPushButton->setToolTip(i18n("Record Image"));
+
+    m_layout->addWidget(m_recordDirectoryPushButton, 1, 1);
+
+    m_imageNameLabel = new QLabel(this);
+    m_imageNameLabel->setText("Image Name:");
+
+    m_layout->addWidget(m_imageNameLabel, 2,0,1,2);
+
+    m_imageNameLineEdit = new QLineEdit(this);
+    m_imageNameLineEdit->setText("image");
+
+    QRegExp rx("[0-9a-zA-z_]+");
+    QValidator *validator = new QRegExpValidator(rx, this);
+    m_imageNameLineEdit->setValidator(validator);
+
+    m_layout->addWidget(m_imageNameLineEdit, 3, 0);
+
     m_recordToggleButton = new QPushButton(this);
     m_recordToggleButton->setCheckable(true);
-    m_recordToggleButton->setText("O");
-    m_recordLayout->addWidget(m_recordToggleButton);
-    m_layout->addLayout(m_recordLayout);
+    m_recordToggleButton->setIcon(KisIconUtils::loadIcon("media-record"));
+    m_recordToggleButton->setToolTip(i18n("Record Image"));
+    m_layout->addWidget(m_recordToggleButton, 3, 1);
 
+    m_logLabel = new QLabel(this);
+    m_logLabel->setText("Recent Save:");
+    m_layout->addWidget(m_logLabel, 4,0,1,2);
+    m_logLineEdit = new QLineEdit(this);
+    m_logLineEdit->setReadOnly(true);
+    m_layout->addWidget(m_logLineEdit, 5,0,1,2);
+
+    m_spacer = new QSpacerItem(1, 1, QSizePolicy::Minimum,QSizePolicy::Expanding);
+    m_layout->addItem(m_spacer, 6, 0,1,2);
+    connect(m_recordDirectoryPushButton, SIGNAL(clicked()), this, SLOT(onSelectRecordFolderButtonClicked()));
     connect(m_recordToggleButton, SIGNAL(toggled(bool)), this, SLOT(onRecordButtonToggled(bool)));
     setWidget(page);
 }
@@ -97,7 +140,7 @@ void RecorderDockerDock::unsetCanvas()
 void RecorderDockerDock::onRecordButtonToggled(bool enabled)
 {
     bool enabled2 = enabled;
-    enableRecord(enabled2, m_recordFileLocationLineEdit->text());
+    enableRecord(enabled2, m_recordDirectoryLineEdit->text() % "/" % m_imageNameLineEdit->text());
 
     if (enabled && !enabled2)
     {
@@ -105,6 +148,14 @@ void RecorderDockerDock::onRecordButtonToggled(bool enabled)
         m_recordToggleButton->setChecked(false);
         connect(m_recordToggleButton, SIGNAL(toggle(bool)), this, SLOT(onRecordButtonToggled(bool)));
     }
+}
+
+void RecorderDockerDock::onSelectRecordFolderButtonClicked()
+{
+    QFileDialog dialog(this);
+    dialog.setFileMode(QFileDialog::DirectoryOnly);
+    QString folder = dialog.getExistingDirectory(this, tr("Select Output Folder"), m_recordDirectoryLineEdit->text(), QFileDialog::ShowDirsOnly);
+    m_recordDirectoryLineEdit->setText(folder);
 }
 
 void RecorderDockerDock::enableRecord(bool &enabled, const QString &path)
@@ -181,6 +232,7 @@ void RecorderDockerDock::generateThumbnail()
                 QString filename = QString(m_recordPath % "_%1.png").arg(++m_recordCounter, 7, 10, QChar('0'));
                 qDebug() << "save image" << filename;
                 recorderImage.save(filename);
+                m_logLineEdit->setText(filename % " saved!");
                 // Code in this block will run in another thread
             });
         }

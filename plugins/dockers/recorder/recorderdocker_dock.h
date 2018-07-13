@@ -23,8 +23,9 @@
 #include <KoCanvasObserverBase.h>
 #include <QPushButton>
 #include <QLineEdit>
-#include <QHBoxLayout>
-
+#include <QGridLayout>
+#include <QLabel>
+#include <QSpacerItem>
 #include <kis_canvas2.h>
 #include "kis_idle_watcher.h"
 
@@ -40,21 +41,29 @@ public:
     void unsetCanvas() override;
 
 private:
-    QVBoxLayout *m_layout;
-    QHBoxLayout *m_recordLayout;
+    QGridLayout *m_layout;
     QPointer<KisCanvas2> m_recordingCanvas;
     QString m_recordPath;
 
     QPointer<KisCanvas2> m_canvas;
-    QLineEdit *m_recordFileLocationLineEdit;
+    QLabel *m_recordDirectoryLabel;
+    QLineEdit *m_recordDirectoryLineEdit;
+    QPushButton *m_recordDirectoryPushButton;
+    QLabel *m_imageNameLabel;
+    QLineEdit *m_imageNameLineEdit;
     QPushButton *m_recordToggleButton;
+    QSpacerItem *m_spacer;
+    QLabel *m_logLabel;
+    QLineEdit *m_logLineEdit;
     KisIdleWatcher m_imageIdleWatcher;
+
     bool m_recordEnabled;
     int m_recordCounter;
     void enableRecord(bool &enabled, const QString &path);
 
 private Q_SLOTS:
 	void onRecordButtonToggled(bool enabled);
+    void onSelectRecordFolderButtonClicked();
     void startUpdateCanvasProjection();
     void generateThumbnail();
 };
