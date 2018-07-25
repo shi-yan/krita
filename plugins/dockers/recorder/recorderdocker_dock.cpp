@@ -44,7 +44,7 @@
 RecorderDockerDock::RecorderDockerDock( )
     : QDockWidget(i18n("Recorder"))
     , m_canvas(0)
-    , m_imageIdleWatcher(2000)
+    , m_imageIdleWatcher(1500)
     , m_recordEnabled(false)
     , m_recordCounter(0)
 {
@@ -219,22 +219,26 @@ void RecorderDockerDock::generateThumbnail()
 {
     if (m_recordEnabled)
     {
-        //QMutexLocker locker(&mutex);
+        //m_imageIdleWatcher.stopCont
+        //QMutexLocker locker(&m_eventMutex);
         if (m_canvas && m_recordingCanvas == m_canvas)
         {
+            disconnect(&m_imageIdleWatcher, &KisIdleWatcher::startedIdleMode, this, &RecorderDockerDock::generateThumbnail);
             KisImageSP image = m_canvas->image();
 
             KisPaintDeviceSP dev = image->projection();
 
-            QtConcurrent::run([=]() 
+            //QtConcurrent::run([&]() 
             {
+                //QMutexLocker locker(&m_saveMutex);
                 QImage recorderImage = dev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
                 QString filename = QString(m_recordPath % "_%1.png").arg(++m_recordCounter, 7, 10, QChar('0'));
                 qDebug() << "save image" << filename;
                 recorderImage.save(filename);
                 m_logLineEdit->setText(filename % " saved!");
                 // Code in this block will run in another thread
-            });
+            }//);
+            connect(&m_imageIdleWatcher, &KisIdleWatcher::startedIdleMode, this, &RecorderDockerDock::generateThumbnail);
         }
     }
 }

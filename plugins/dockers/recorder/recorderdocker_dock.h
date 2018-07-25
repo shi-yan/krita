@@ -56,6 +56,8 @@ private:
     QLabel *m_logLabel;
     QLineEdit *m_logLineEdit;
     KisIdleWatcher m_imageIdleWatcher;
+    QMutex m_saveMutex;
+    QMutex m_eventMutex;
 
     bool m_recordEnabled;
     int m_recordCounter;
