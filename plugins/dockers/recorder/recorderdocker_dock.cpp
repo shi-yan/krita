@@ -44,7 +44,7 @@
 RecorderDockerDock::RecorderDockerDock( )
     : QDockWidget(i18n("Recorder"))
     , m_canvas(0)
-    , m_imageIdleWatcher(250)
+    , m_imageIdleWatcher(2000)
     , m_recordEnabled(false)
     , m_recordCounter(0)
 {
@@ -122,7 +122,7 @@ void RecorderDockerDock::setCanvas(KoCanvasBase * canvas)
         connect(m_canvas->image(), SIGNAL(sigImageUpdated(QRect)),SLOT(startUpdateCanvasProjection()));
         connect(m_canvas->image(), SIGNAL(sigSizeChanged(QPointF, QPointF)),SLOT(startUpdateCanvasProjection()));
 
-        generateThumbnail();
+        //generateThumbnail();
     }
 }
 
