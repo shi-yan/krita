@@ -40,13 +40,15 @@
 #include <kactioncollection.h>
 #include <QRegExp>
 #include <QRegExpValidator>
+#include "encoder.h"
 
 RecorderDockerDock::RecorderDockerDock( )
     : QDockWidget(i18n("Recorder"))
     , m_canvas(0)
-    , m_imageIdleWatcher(1500)
+    , m_imageIdleWatcher(1000)
     , m_recordEnabled(false)
     , m_recordCounter(0)
+    , m_encoder(nullptr)
 {
     QWidget *page = new QWidget(this);
     m_layout = new QGridLayout(page);
@@ -62,12 +64,12 @@ RecorderDockerDock::RecorderDockerDock( )
 
     m_recordDirectoryPushButton = new QPushButton(this);
     m_recordDirectoryPushButton->setIcon(KisIconUtils::loadIcon("folder"));
-    m_recordDirectoryPushButton->setToolTip(i18n("Record Image"));
+    m_recordDirectoryPushButton->setToolTip(i18n("Record Video"));
 
     m_layout->addWidget(m_recordDirectoryPushButton, 1, 1);
 
     m_imageNameLabel = new QLabel(this);
-    m_imageNameLabel->setText("Image Name:");
+    m_imageNameLabel->setText("Video Name:");
 
     m_layout->addWidget(m_imageNameLabel, 2,0,1,2);
 
@@ -83,7 +85,7 @@ RecorderDockerDock::RecorderDockerDock( )
     m_recordToggleButton = new QPushButton(this);
     m_recordToggleButton->setCheckable(true);
     m_recordToggleButton->setIcon(KisIconUtils::loadIcon("media-record"));
-    m_recordToggleButton->setToolTip(i18n("Record Image"));
+    m_recordToggleButton->setToolTip(i18n("Record Video"));
     m_layout->addWidget(m_recordToggleButton, 3, 1);
 
     m_logLabel = new QLabel(this);
@@ -121,8 +123,6 @@ void RecorderDockerDock::setCanvas(KoCanvasBase * canvas)
 
         connect(m_canvas->image(), SIGNAL(sigImageUpdated(QRect)),SLOT(startUpdateCanvasProjection()));
         connect(m_canvas->image(), SIGNAL(sigSizeChanged(QPointF, QPointF)),SLOT(startUpdateCanvasProjection()));
-
-        //generateThumbnail();
     }
 }
 
@@ -146,6 +146,7 @@ void RecorderDockerDock::onRecordButtonToggled(bool enabled)
     {
         disconnect(m_recordToggleButton, SIGNAL(toggle(bool)), this, SLOT(onRecordButtonToggled(bool)));
         m_recordToggleButton->setChecked(false);
+        
         connect(m_recordToggleButton, SIGNAL(toggle(bool)), this, SLOT(onRecordButtonToggled(bool)));
     }
 }
@@ -181,16 +182,15 @@ void RecorderDockerDock::enableRecord(bool &enabled, const QString &path)
             }
         }
 
-        QFileInfoList images = dir.entryInfoList({filename % "_*.png"});
+        QFileInfoList images = dir.entryInfoList({filename % "_*.webm"});
 
-        QRegularExpression namePattern("^"%filename%"_([0-9]{7}).png$");
-
+        QRegularExpression namePattern("^"%filename%"_([0-9]{7}).webm$");
+        m_recordCounter = -1;
         foreach(auto info, images)
         {
             QRegularExpressionMatch match = namePattern.match(info.fileName());
             if (match.hasMatch())
             {
-                //qDebug() << "match" << info.fileName() << match.captured(1);
                 QString count = match.captured(1);
                 int numCount = count.toInt();
 
@@ -198,13 +198,16 @@ void RecorderDockerDock::enableRecord(bool &enabled, const QString &path)
                 {
                     m_recordCounter = numCount;
                 }
-                //qDebug() << QString("%1").arg((qulonglong)numCount, 7, 10, QChar('0'));
             }
         }
 
         if (m_canvas)
         {
             m_recordingCanvas = m_canvas;
+            
+            QString finalFileName = QString(m_recordPath % "_%1.webm").arg(++m_recordCounter, 7, 10, QChar('0'));
+            m_encoder = new Encoder();
+            m_encoder->init(finalFileName.toStdString().c_str(), m_canvas->image()->width(), m_canvas->image()->height());
             startUpdateCanvasProjection();
         }
         else
@@ -213,31 +216,35 @@ void RecorderDockerDock::enableRecord(bool &enabled, const QString &path)
             return;
         }
     }
+    else
+    {
+        if (m_encoder)
+        {
+            m_encoder->finish();
+            m_encoder = nullptr;
+        }
+    }
 }
 
 void RecorderDockerDock::generateThumbnail()
 {
     if (m_recordEnabled)
     {
-        //m_imageIdleWatcher.stopCont
-        //QMutexLocker locker(&m_eventMutex);
         if (m_canvas && m_recordingCanvas == m_canvas)
         {
             disconnect(&m_imageIdleWatcher, &KisIdleWatcher::startedIdleMode, this, &RecorderDockerDock::generateThumbnail);
-            KisImageSP image = m_canvas->image();
-
-            KisPaintDeviceSP dev = image->projection();
-
-            //QtConcurrent::run([&]() 
+            if (m_encoder)
             {
-                //QMutexLocker locker(&m_saveMutex);
-                QImage recorderImage = dev->convertToQImage(KoColorSpaceRegistry::instance()->rgb8()->profile());
-                QString filename = QString(m_recordPath % "_%1.png").arg(++m_recordCounter, 7, 10, QChar('0'));
-                qDebug() << "save image" << filename;
-                recorderImage.save(filename);
-                m_logLineEdit->setText(filename % " saved!");
-                // Code in this block will run in another thread
-            }//);
+                KisImageSP image = m_canvas->image();
+                KisPaintDeviceSP dev = image->projection();
+                
+                gpointer data;
+                gsize size = image->width() * image->height() * dev->pixelSize();
+                data = g_malloc(size);
+                dev->readBytes((quint8*)data, 0, 0, image->width(), image->height());
+                m_encoder->pushFrame(data, size);
+            }
+
             connect(&m_imageIdleWatcher, &KisIdleWatcher::startedIdleMode, this, &RecorderDockerDock::generateThumbnail);
         }
     }

@@ -28,6 +28,7 @@
 #include <QSpacerItem>
 #include <kis_canvas2.h>
 #include "kis_idle_watcher.h"
+#include "encoder.h"
 
 class QVBoxLayout;
 class RecorderWidget;
@@ -58,6 +59,7 @@ private:
     KisIdleWatcher m_imageIdleWatcher;
     QMutex m_saveMutex;
     QMutex m_eventMutex;
+    Encoder *m_encoder;
 
     bool m_recordEnabled;
     int m_recordCounter;
